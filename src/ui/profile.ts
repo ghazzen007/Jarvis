@@ -361,16 +361,62 @@ export function render() {
     r.addEventListener("change", () => on(parseFloat(r.value)));
     return r;
   };
-  const test = h("button", { class: "btn sm", type: "button" });
-  test.innerHTML = `${icon("wave")}<span>Test voice</span>`;
+  const sample = () =>
+    `Good evening, ${state.profile.addressAs || "sir"}. Everything's running smoothly. I've checked your schedule, and you have a free hour before your next task — shall I help you make the most of it?`;
+  const test = h("button", { class: "btn sm primary", type: "button" });
+  test.innerHTML = `${icon("wave")}<span>Preview voice</span>`;
   test.addEventListener("click", () => {
     voice.stopSpeaking();
-    voice.speak(`Good day, ${state.profile.addressAs}. All systems are operational, and I must say, you're looking rather productive today.`);
+    voice.speak(sample());
   });
-  const eKey = h("input", { class: "field", type: "password", value: s.elevenKey, placeholder: "ElevenLabs API key (optional)", autocomplete: "off" }) as HTMLInputElement;
-  const eVoice = h("input", { class: "field", value: s.elevenVoiceId, placeholder: "Voice ID from your ElevenLabs library" }) as HTMLInputElement;
-  eKey.addEventListener("change", () => ((s.elevenKey = eKey.value.trim()), saveSettings()));
-  eVoice.addEventListener("change", () => ((s.elevenVoiceId = eVoice.value.trim()), saveSettings()));
+
+  // engine
+  const eng = h("div", { class: "seg" });
+  for (const [v, l] of [
+    ["auto", "Auto"],
+    ["gemini", "Natural"],
+    ["eleven", "HD"],
+    ["device", "Phone"],
+  ] as const) {
+    const b = h("button", { type: "button", class: v === s.voiceEngine ? "on" : "" }, l);
+    b.addEventListener("click", () => {
+      s.voiceEngine = v;
+      saveSettings();
+      render();
+    });
+    eng.append(b);
+  }
+  const engHint = h("p", { class: "hint" });
+  engHint.innerHTML =
+    "<b>Natural</b> — Google's human-like voices, free with your Gemini key. <b>HD</b> — ElevenLabs, the most realistic (free tier with a monthly character limit). <b>Phone</b> — your device's built-in voice, works offline. <b>Auto</b> picks the best one you've set up.";
+
+  // Gemini natural voice
+  const gvoice = h("select", { class: "field" }) as HTMLSelectElement;
+  gvoice.innerHTML = voice.GEMINI_VOICES.map(([n, d]) => `<option value="${n}" ${n === s.geminiVoice ? "selected" : ""}>${n} — ${d}</option>`).join("");
+  gvoice.addEventListener("change", () => {
+    s.geminiVoice = gvoice.value;
+    saveSettings();
+    voice.stopSpeaking();
+    voice.speak(sample());
+  });
+
+  // ElevenLabs
+  const eKey = h("input", { class: "field", type: "password", value: s.elevenKey, placeholder: "ElevenLabs API key", autocomplete: "off" }) as HTMLInputElement;
+  const eVoice = h("input", { class: "field", value: s.elevenVoiceId, placeholder: "Voice ID" }) as HTMLInputElement;
+  eKey.addEventListener("change", () => ((s.elevenKey = eKey.value.trim()), saveSettings(), render()));
+  eVoice.addEventListener("change", () => ((s.elevenVoiceId = eVoice.value.trim()), saveSettings(), render()));
+  const presets = h("div", { class: "row wrap", style: "margin-top:8px" });
+  for (const [name, id, desc] of voice.ELEVEN_PRESETS) {
+    const b = h("button", { class: `chip${s.elevenVoiceId === id ? " on" : ""}`, type: "button", title: desc }, `${name} · ${desc.split(" — ")[0]}`);
+    if (s.elevenVoiceId === id) b.style.borderColor = "var(--cyan)";
+    b.addEventListener("click", () => {
+      s.elevenVoiceId = id;
+      saveSettings();
+      render();
+    });
+    presets.append(b);
+  }
+
   vo.append(
     setting("Speak replies", "Read answers aloud", toggle(s.speak, (v) => ((s.speak = v), saveSettings()))),
     setting(
@@ -381,26 +427,33 @@ export function render() {
         saveSettings();
       }),
     ),
-    h("label", { class: "lbl" }, "Language"),
+    h("label", { class: "lbl" }, "Language (listening & speaking)"),
     lang,
-    h("label", { class: "lbl" }, "Device voice"),
-    vsel,
-    h("label", { class: "lbl" }, "Rate"),
-    range(0.7, 1.4, 0.02, s.voiceRate, (v) => ((s.voiceRate = v), saveSettings())),
-    h("label", { class: "lbl" }, "Pitch"),
-    range(0.5, 1.5, 0.02, s.voicePitch, (v) => ((s.voicePitch = v), saveSettings())),
+    h("label", { class: "lbl" }, "Voice engine"),
+    eng,
+    engHint,
+    h("label", { class: "lbl" }, "Pace"),
+    range(0.85, 1.3, 0.01, s.voiceRate, (v) => ((s.voiceRate = v), saveSettings())),
     h("div", { style: "height:10px" }),
     test,
+    h("div", { class: "section-label" }, "Natural voice (Gemini, free)"),
+    s.geminiKey ? gvoice : h("p", { class: "hint", style: "margin-top:0" }, "Add a free Gemini key in AI core above to unlock natural voices."),
     h("div", { class: "section-label" }, "HD voice (ElevenLabs)"),
     eKey,
     h("div", { style: "height:8px" }),
     eVoice,
-    setting("AI voice processing", "Subtle presence & shimmer on HD voice", toggle(s.voiceFx, (v) => ((s.voiceFx = v), saveSettings()))),
+    presets,
     (() => {
       const p = h("p", { class: "hint" });
-      p.innerHTML = `Pick a refined British male voice from the ElevenLabs Voice Library, add it to your voices and paste its ID. Cloning a real actor's voice isn't supported — it needs that person's consent.`;
+      p.innerHTML = `Free account at <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">elevenlabs.io</a> → create an API key, then tap a British voice above. These are original voices — copying a real actor's voice isn't supported.`;
       return p;
     })(),
+    setting("Clarity polish", "Gentle warmth & presence on cloud voices", toggle(s.voiceFx, (v) => ((s.voiceFx = v), saveSettings()))),
+    h("div", { class: "section-label" }, "Phone voice"),
+    h("label", { class: "lbl", style: "margin-top:0" }, "Device voice"),
+    vsel,
+    h("label", { class: "lbl" }, "Pitch"),
+    range(0.6, 1.4, 0.02, s.voicePitch, (v) => ((s.voicePitch = v), saveSettings())),
   );
 
   /* --- connections --- */

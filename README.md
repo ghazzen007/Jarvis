@@ -37,11 +37,19 @@ Keys are stored only on your device (IndexedDB) and are sent only to their own p
 
 ## The voice
 
-Jarvis picks the most refined **British male voice your phone has** (for example Daniel or Google UK English Male). You can tune rate and pitch in Profile → Voice.
+Jarvis is designed to sound like a refined, warm British assistant who talks to you, not a machine reading text:
 
-For a higher-quality voice, add an **ElevenLabs** API key and a **voice ID** from their Voice Library (choose a calm British butler-style voice). An optional "AI voice processing" filter adds a subtle presence and shimmer, and the orb then pulses to the real audio.
+- **Natural voice (free):** Google's human-like Gemini voices. It uses your Gemini key, and the "Iapetus" voice is recommended. Each line is sent with a style direction: a calm, warm British butler with a natural, brisk rhythm.
+- **HD voice:** ElevenLabs, the most realistic option. It has a free tier. One tap selects a premade British voice (George or Daniel).
+- **Phone voice:** the device's built-in voice, which works offline.
 
-> The app does not clone the film character's voice. That voice belongs to a real actor, and cloning a real person's voice without their consent isn't something this project does.
+How Jarvis speaks:
+- The first sentence starts playing immediately. The next chunk's audio is fetched while the current one plays, so there are no robotic gaps.
+- Only the spoken gist of a long answer is read aloud. Lists, headings and code stay on screen, and Jarvis says so.
+- Abbreviations, symbols, emoji and links are turned into natural speech or skipped.
+- You can adjust the pace in **Profile → Voice**.
+
+> These are original voices. The app doesn't copy a real actor's voice, which would need that person's consent.
 
 ## Connect Gmail and Calendar (optional, about 2 minutes)
 

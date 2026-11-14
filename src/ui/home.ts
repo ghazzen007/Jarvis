@@ -278,7 +278,7 @@ export function refreshReadout() {
   readout.focus.innerHTML = `FOCUS<b>${focus}<small>m</small></b><div class="bar"><i style="width:${Math.min(100, (focus / 120) * 100)}%"></i></div>`;
   readout.mem.innerHTML = `MEMORY<b>${String(state.profile.memory.length).padStart(2, "0")}</b>`;
   readout.net.innerHTML = `UPLINK<b>${navigator.onLine ? "ON" : "OFF"}</b><div class="bar"><i style="width:${navigator.onLine ? 100 : 8}%"></i></div>`;
-  readout.voice.innerHTML = `VOICE<b>${state.settings.elevenKey ? "HD" : "STD"}</b>`;
+  readout.voice.innerHTML = `VOICE<b>${voice.activeVoiceLabel()}</b>`;
   readout.model.innerHTML = `CORE<b>${state.settings.provider === "claude" ? (state.settings.model.split("-")[1]?.toUpperCase() ?? "AI") : state.settings.provider.toUpperCase()}</b><div class="bar"><i style="width:${{ low: 33, medium: 66, high: 100 }[state.settings.effort]}%"></i></div>`;
 }
 

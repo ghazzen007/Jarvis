@@ -186,6 +186,7 @@ async function start() {
     voice.speak(`Pardon the interruption, ${state.profile.addressAs || "sir"}. ${title === "Reminder" ? "A reminder" : "This task is now due"}: ${body}`);
   });
   applyWake();
+  voice.onVoiceIssue((msg) => toast("Voice", msg, 7000));
 
   const action = new URLSearchParams(location.search).get("action");
   if (!hasKey()) setTimeout(showOnboarding, 1600);

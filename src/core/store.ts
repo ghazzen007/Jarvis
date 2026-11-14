@@ -73,6 +73,8 @@ export interface Profile {
 
 export type Effort = "low" | "medium" | "high";
 export type Provider = "claude" | "gemini" | "groq";
+/** auto = ElevenLabs if set up, else Gemini natural voice if a Gemini key exists, else the phone's voice. */
+export type VoiceEngine = "auto" | "gemini" | "eleven" | "device";
 
 export interface Settings {
   provider: Provider;
@@ -88,6 +90,8 @@ export interface Settings {
   voiceRate: number;
   voicePitch: number;
   language: string; // BCP-47 for speech recognition / synthesis
+  voiceEngine: VoiceEngine;
+  geminiVoice: string;
   elevenKey: string;
   elevenVoiceId: string;
   voiceFx: boolean;
@@ -159,12 +163,14 @@ export const DEFAULT_SETTINGS: Settings = {
   effort: "low",
   speak: true,
   voiceName: "",
-  voiceRate: 1.02,
-  voicePitch: 0.92,
+  voiceRate: 1.08,
+  voicePitch: 0.95,
   language: "en-GB",
+  voiceEngine: "auto",
+  geminiVoice: "Iapetus",
   elevenKey: "",
   elevenVoiceId: "",
-  voiceFx: true,
+  voiceFx: false,
   wakeWord: false,
   googleClientId: "",
   reducedMotion: false,
