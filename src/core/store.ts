@@ -72,10 +72,16 @@ export interface Profile {
 }
 
 export type Effort = "low" | "medium" | "high";
+export type Provider = "claude" | "gemini" | "groq";
 
 export interface Settings {
-  apiKey: string;
-  model: string;
+  provider: Provider;
+  apiKey: string; // Claude
+  model: string; // Claude model
+  geminiKey: string;
+  geminiModel: string;
+  groqKey: string;
+  groqModel: string;
   effort: Effort;
   speak: boolean;
   voiceName: string;
@@ -119,6 +125,8 @@ export interface Session {
   system: string; // frozen at session start (keeps prompt cache + thinking blocks valid)
   messages: Anthropic.Beta.BetaMessageParam[];
   display: DisplayMsg[];
+  /** Native history for the free providers (Gemini contents / Groq messages), kept unchanged. */
+  alt?: { provider: Provider; messages: unknown[] };
   createdAt: number;
   updatedAt: number;
 }
@@ -141,8 +149,13 @@ export interface State {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  provider: "claude",
   apiKey: "",
   model: "claude-opus-5-5",
+  geminiKey: "",
+  geminiModel: "gemini-flash-lite-latest",
+  groqKey: "",
+  groqModel: "openai/gpt-oss-120b",
   effort: "low",
   speak: true,
   voiceName: "",

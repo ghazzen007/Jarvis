@@ -8,7 +8,7 @@ import { mountHome, send, startListening, refreshReadout, setFocusStarter, reren
 import { mountTasks, render as renderTasks } from "./ui/tasks";
 import { mountComms, render as renderComms } from "./ui/comms";
 import { mountStudy, render as renderStudy, startFocus, openDeck } from "./ui/study";
-import { mountProfile, render as renderProfile, showOnboarding, setSettingsListener } from "./ui/profile";
+import { mountProfile, render as renderProfile, showOnboarding, setSettingsListener, hasKey } from "./ui/profile";
 import { initOverlays, toast } from "./ui/overlay";
 import { cardActions } from "./ui/cards";
 import { icon } from "./ui/icons";
@@ -188,7 +188,7 @@ async function start() {
   applyWake();
 
   const action = new URLSearchParams(location.search).get("action");
-  if (!state.settings.apiKey) setTimeout(showOnboarding, 1600);
+  if (!hasKey()) setTimeout(showOnboarding, 1600);
   else if (action === "listen") setTimeout(() => startListening(), 1200);
   else if (action === "brief") setTimeout(() => void send("Give me my briefing: weather, today's calendar, important unread email, and tasks due today. Keep it tight."), 1200);
   else if (tapped) setTimeout(() => voice.speak(greeting()), 900);

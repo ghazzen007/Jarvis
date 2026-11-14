@@ -1,4 +1,5 @@
-import { state, commit, DEFAULT_PROFILE, type Effort, type Profile } from "../core/store";
+import { state, commit, DEFAULT_PROFILE, type Effort, type Profile, type Provider } from "../core/store";
+import { PROVIDER_INFO, listModels } from "../core/providers";
 import { kvClear } from "../core/db";
 import { MODELS, extractProfileFromCV, noteProfileChanged, resetSession } from "../core/brain";
 import * as google from "../core/google";
@@ -18,6 +19,38 @@ function saveSettings() {
   commit("settings");
   onSettingsChanged();
 }
+
+type KeyField = "apiKey" | "geminiKey" | "groqKey";
+const KEY_FIELD: Record<Provider, KeyField> = { claude: "apiKey", gemini: "geminiKey", groq: "groqKey" };
+const PROVIDERS: [Provider, string][] = [
+  ["gemini", "Gemini · free"],
+  ["groq", "Groq · free"],
+  ["claude", "Claude"],
+];
+
+/** True when the selected AI provider has a key. */
+export function hasKey(): boolean {
+  return !!state.settings[KEY_FIELD[state.settings.provider]].trim();
+}
+
+function keyHintHTML(p: Provider): string {
+  if (p === "claude")
+    return `Paid API — create a key at <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com</a> (needs credits).`;
+  const i = PROVIDER_INFO[p];
+  return `${i.keyHint} Get it at <a href="${i.keyUrl}" target="_blank" rel="noopener">${new URL(i.keyUrl).hostname}</a>.`;
+}
+
+function providerSeg(cur: Provider, on: (p: Provider) => void) {
+  const seg = h("div", { class: "seg" });
+  for (const [v, l] of PROVIDERS) {
+    const b = h("button", { type: "button", class: v === cur ? "on" : "" }, l);
+    b.addEventListener("click", () => on(v));
+    seg.append(b);
+  }
+  return seg;
+}
+
+const modelCache: Partial<Record<Provider, string[]>> = {};
 
 function profileChanged() {
   commit("profile");
@@ -113,20 +146,30 @@ function editProfile() {
 
 /* ------------------------------ onboarding ------------------------------ */
 export function showOnboarding() {
-  const key = h("input", { class: "field", type: "password", placeholder: "sk-ant-…", autocomplete: "off" }) as HTMLInputElement;
+  let prov: Provider = state.settings.provider === "claude" && !state.settings.apiKey ? "gemini" : state.settings.provider;
+  const key = h("input", { class: "field", type: "password", autocomplete: "off" }) as HTMLInputElement;
+  const keyHint = h("p", { class: "hint" });
+  const keyLabel = h("label", { class: "lbl" });
+  const segHost = h("div", {});
+  const paintProv = () => {
+    keyLabel.textContent = `1 · ${prov === "claude" ? "Claude" : PROVIDER_INFO[prov].label} API key`;
+    key.placeholder = prov === "claude" ? "sk-ant-…" : prov === "groq" ? "gsk_…" : "AIza…";
+    key.value = state.settings[KEY_FIELD[prov]];
+    keyHint.innerHTML = keyHintHTML(prov) + " It stays on this phone.";
+    segHost.replaceChildren(providerSeg(prov, (p) => ((prov = p), paintProv())));
+  };
+  paintProv();
   const name = h("input", { class: "field", placeholder: "Your name", value: state.profile.name }) as HTMLInputElement;
   const addr = h("select", { class: "field" }) as HTMLSelectElement;
   addr.innerHTML = ["sir", "madam", "boss", "my first name"].map((a) => `<option ${a === state.profile.addressAs ? "selected" : ""}>${a}</option>`).join("");
   const wrap = h("form", {});
   wrap.innerHTML = `<div class="view-title">Initial calibration</div><p class="view-sub">Three quick steps and I'm at your service.</p>`;
   wrap.append(
-    h("label", { class: "lbl" }, "1 · Claude API key"),
+    h("label", { class: "lbl" }, "AI brain"),
+    segHost,
+    keyLabel,
     key,
-    (() => {
-      const p = h("p", { class: "hint" });
-      p.innerHTML = `Create one at <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com</a>. It stays on this phone and is only sent to Anthropic.`;
-      return p;
-    })(),
+    keyHint,
     h("label", { class: "lbl" }, "2 · Who am I serving?"),
     h("div", { class: "row" }, name, addr),
   );
@@ -134,17 +177,19 @@ export function showOnboarding() {
   cv.innerHTML = `${icon("upload")}<span>3 · Import my CV (optional)</span>`;
   cv.addEventListener("click", () => {
     if (key.value.trim()) {
-      state.settings.apiKey = key.value.trim();
+      state.settings[KEY_FIELD[prov]] = key.value.trim();
+      state.settings.provider = prov;
       saveSettings();
     }
-    if (!state.settings.apiKey) return toast("Calibration", "Add your API key first.");
+    if (!hasKey()) return toast("Calibration", "Add your API key first.");
     void importCV(() => (cv.innerHTML = `${icon("check")}<span>CV imported</span>`));
   });
   wrap.append(cv, h("div", { style: "height:16px" }), h("button", { class: "btn primary block", type: "submit" }, "Engage"));
   wrap.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (key.value.trim()) state.settings.apiKey = key.value.trim();
-    if (!state.settings.apiKey) return key.focus();
+    if (key.value.trim()) state.settings[KEY_FIELD[prov]] = key.value.trim();
+    state.settings.provider = prov;
+    if (!hasKey()) return key.focus();
     state.profile.name = name.value.trim() || state.profile.name;
     state.profile.addressAs = addr.value === "my first name" ? state.profile.name.split(" ")[0] || "sir" : addr.value;
     saveSettings();
@@ -169,7 +214,7 @@ export function render() {
   const heroActs = h("div", { class: "row", style: "margin-top:14px" });
   const cvBtn = h("button", { class: `btn ${p.cvImported ? "" : "primary"} grow`, type: "button" });
   cvBtn.innerHTML = `${icon("upload")}<span>${p.cvImported ? "Re-import CV" : "Import CV"}</span>`;
-  cvBtn.addEventListener("click", () => (state.settings.apiKey ? void importCV() : showOnboarding()));
+  cvBtn.addEventListener("click", () => (hasKey() ? void importCV() : showOnboarding()));
   const edit = h("button", { class: "btn ghost", type: "button" });
   edit.innerHTML = `${icon("edit")}<span>Edit</span>`;
   edit.addEventListener("click", editProfile);
@@ -206,18 +251,48 @@ export function render() {
 
   /* --- AI core --- */
   const ai = h("div", { class: "panel" });
-  const keyIn = h("input", { class: "field", type: "password", value: s.apiKey, placeholder: "sk-ant-…", autocomplete: "off" }) as HTMLInputElement;
+  const prov = s.provider;
+  const kf = KEY_FIELD[prov];
+  const keyIn = h("input", { class: "field", type: "password", value: s[kf], placeholder: prov === "claude" ? "sk-ant-…" : prov === "groq" ? "gsk_…" : "AIza…", autocomplete: "off" }) as HTMLInputElement;
   keyIn.addEventListener("change", () => {
-    s.apiKey = keyIn.value.trim();
+    s[kf] = keyIn.value.trim();
     saveSettings();
-    toast("Core", s.apiKey ? "API key saved on this device." : "API key removed.");
+    toast("Core", s[kf] ? "Key saved on this device." : "Key removed.");
+    render();
   });
+  const keyHint = h("p", { class: "hint" });
+  keyHint.innerHTML = keyHintHTML(prov);
+
   const model = h("select", { class: "field" }) as HTMLSelectElement;
-  model.innerHTML = MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? "selected" : ""}>${m.label}</option>`).join("");
-  model.addEventListener("change", () => {
-    s.model = model.value;
-    saveSettings();
-  });
+  const modelRow = h("div", { class: "row" }, model);
+  model.classList.add("grow");
+  if (prov === "claude") {
+    model.innerHTML = MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? "selected" : ""}>${m.label}</option>`).join("");
+    model.addEventListener("change", () => ((s.model = model.value), saveSettings()));
+  } else {
+    const field = prov === "gemini" ? "geminiModel" : "groqModel";
+    const fill = (ids: string[]) => {
+      const all = [s[field], ...ids].filter((v, i, a) => v && a.indexOf(v) === i);
+      model.innerHTML = all.map((id) => `<option value="${esc(id)}" ${id === s[field] ? "selected" : ""}>${esc(id)}</option>`).join("");
+    };
+    fill(modelCache[prov] ?? []);
+    model.addEventListener("change", () => ((s[field] = model.value), saveSettings()));
+    const refresh = h("button", { class: "icon-btn", type: "button", "aria-label": "Load available models" });
+    refresh.innerHTML = icon("reset");
+    const load = async (quiet: boolean) => {
+      try {
+        modelCache[prov] = await listModels(prov);
+        fill(modelCache[prov]!);
+        if (!quiet) toast("Core", `${modelCache[prov]!.length} models available.`);
+      } catch (e) {
+        if (!quiet) toast("Core", (e as Error).message, 7000);
+      }
+    };
+    refresh.addEventListener("click", () => void load(false));
+    modelRow.append(refresh);
+    if (s[kf] && !modelCache[prov]) void load(true);
+  }
+
   const eff = h("div", { class: "seg" });
   for (const [v, l] of [
     ["low", "Swift"],
@@ -233,13 +308,29 @@ export function render() {
     eff.append(b);
   }
   ai.append(
-    h("label", { class: "lbl", style: "margin-top:0" }, "Claude API key"),
+    h("label", { class: "lbl", style: "margin-top:0" }, "AI brain"),
+    providerSeg(prov, (p) => {
+      s.provider = p;
+      saveSettings();
+      toast("Core", `Switched to ${p === "claude" ? "Claude" : PROVIDER_INFO[p].label}.`);
+      render();
+    }),
+    h("label", { class: "lbl" }, `${prov === "claude" ? "Claude" : PROVIDER_INFO[prov].label} API key`),
     keyIn,
+    keyHint,
     h("label", { class: "lbl" }, "Model"),
-    model,
+    modelRow,
     h("label", { class: "lbl" }, "Reasoning depth"),
     eff,
-    h("p", { class: "hint" }, "Swift is best for voice. Research requests automatically go Deep."),
+    h(
+      "p",
+      { class: "hint" },
+      prov === "claude"
+        ? "Swift is best for voice. Research requests automatically go Deep."
+        : prov === "gemini"
+          ? "Free tier: Flash-Lite allows the most requests per day. Deep and research questions use Google Search. Gemini can read PDFs and photos."
+          : "Free tier with daily limits. Deep and research questions use Groq's web search. Groq handles text only — use Gemini for PDFs/photos.",
+    ),
   );
 
   /* --- voice --- */

@@ -96,17 +96,23 @@ const DESCRIPTIONS: Record<Name, string> = {
   open_link: "Offer the user a button to open a useful link (maps, docs, a video, a course page).",
 };
 
+/** Provider-neutral tool definitions (JSON Schema), shared by Claude, Gemini and Groq. */
+export const CLIENT_TOOLS: { name: string; description: string; schema: Record<string, unknown> }[] = (Object.keys(S) as Name[]).map((name) => {
+  const schema = z.toJSONSchema(S[name]) as Record<string, unknown>;
+  delete schema.$schema;
+  return { name, description: DESCRIPTIONS[name], schema };
+});
+
 export const TOOLS: Anthropic.Beta.BetaToolUnion[] = [
-  ...(Object.keys(S) as Name[]).map((name) => {
-    const schema = z.toJSONSchema(S[name]) as Record<string, unknown>;
-    delete schema.$schema;
-    return {
-      name,
-      description: DESCRIPTIONS[name],
-      input_schema: schema as Anthropic.Beta.BetaTool.InputSchema,
-      eager_input_streaming: true,
-    } satisfies Anthropic.Beta.BetaTool;
-  }),
+  ...CLIENT_TOOLS.map(
+    (t) =>
+      ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.schema as Anthropic.Beta.BetaTool.InputSchema,
+        eager_input_streaming: true,
+      }) satisfies Anthropic.Beta.BetaTool,
+  ),
   { type: "web_search_20260209", name: "web_search", max_uses: 6 },
   { type: "web_fetch_20260209", name: "web_fetch", max_uses: 4 },
 ];

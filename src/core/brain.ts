@@ -4,6 +4,8 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { state, commit, uid, type Effort, type Profile, type Session } from "./store";
 import { TOOLS, TOOL_LABELS, runTool, type ToolUI } from "./tools";
 import { buildSystemPrompt, contextMessage } from "./prompt";
+import { NoKeyError } from "./errors";
+import { askFree, extractProfileFree } from "./providers";
 
 type MsgParam = Anthropic.Beta.BetaMessageParam;
 type Block = Anthropic.Beta.BetaContentBlockParam;
@@ -25,7 +27,7 @@ let clientKey = "";
 
 function getClient(): Anthropic {
   const key = state.settings.apiKey.trim();
-  if (!key) throw new NoKeyError();
+  if (!key) throw new NoKeyError("No Claude API key yet. Open Profile → AI core and paste it — or pick a free provider (Gemini / Groq).");
   if (!client || key !== clientKey) {
     // Personal app: the key lives only on this device and goes straight to Anthropic.
     client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2 });
@@ -34,11 +36,7 @@ function getClient(): Anthropic {
   return client;
 }
 
-export class NoKeyError extends Error {
-  constructor() {
-    super("No API key yet. Open Profile → Settings and paste your Claude API key.");
-  }
-}
+export { NoKeyError };
 
 function newSession(extraSystem = ""): Session {
   return {
@@ -157,12 +155,28 @@ async function compactIfNeeded(s: Session): Promise<Session> {
  * Returns the final visible text.
  */
 export async function ask(content: string | Block[], hooks: AskHooks, effortOverride?: Effort): Promise<string> {
-  const api = getClient();
-  let s = await compactIfNeeded(ensureSession());
   const effort = effortOverride ?? state.settings.effort;
+  const userBlocks: Block[] = typeof content === "string" ? [{ type: "text", text: content }] : content;
+  const provider = state.settings.provider;
+
+  if (provider !== "claude") {
+    const ctrl = new AbortController();
+    controller = { abort: () => ctrl.abort() };
+    try {
+      return await askFree(provider, ensureSession(), userBlocks, hooks, effort, ctrl.signal);
+    } catch (err) {
+      if (ctrl.signal.aborted) return "";
+      throw err instanceof Error ? err : new Error(String(err));
+    } finally {
+      controller = null;
+      hooks.onActivity(null);
+    }
+  }
+
+  const api = getClient();
+  const s = await compactIfNeeded(ensureSession());
   const start = s.messages.length;
 
-  const userBlocks: Block[] = typeof content === "string" ? [{ type: "text", text: content }] : content;
   s.messages.push({ role: "user", content: userBlocks });
   const notes = pendingSystemNotes.splice(0).join("\n\n");
   // Volatile context goes in an appended system message, never into the frozen prompt.
@@ -245,7 +259,7 @@ function friendlyError(err: unknown): Error {
     const body = err.error as { error?: { message?: string } } | undefined;
     const msg = body?.error?.message ?? err.message;
     if (/credit balance/i.test(msg))
-      return new Error("Your Claude API account has no credits left. Add credits at platform.claude.com → Settings → Billing, then try again.");
+      return new Error("Your Claude API account has no credits. Switch to a free brain (Gemini or Groq) in Profile → AI core, or add credits at platform.claude.com → Settings → Billing.");
     return new Error(`Request rejected: ${msg}`);
   }
   if (err instanceof Anthropic.APIConnectionError) return new Error("I can't reach the network right now.");
@@ -272,6 +286,7 @@ const ProfileSchema = z.object({
 });
 
 export async function extractProfileFromCV(input: { pdfBase64?: string; imageBase64?: string; imageType?: string; text?: string }): Promise<Partial<Profile>> {
+  if (state.settings.provider !== "claude") return extractProfileFree(state.settings.provider, input);
   const content: Anthropic.ContentBlockParam[] = [];
   if (input.pdfBase64) content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: input.pdfBase64 } });
   if (input.imageBase64)

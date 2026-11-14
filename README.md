@@ -2,7 +2,7 @@
 
 A personal assistant you can install on your phone. It talks, listens, and handles everyday work: tasks, reminders, mail, calls, messages, calendar, research, and studying. It runs on Claude, and its interface is a holographic HUD with a 3D particle core that reacts to your voice.
 
-> Installable PWA · Three.js core · Claude Opus 5.5 with web search and tools · voice in and out · Gmail and Calendar · built for mobile
+> Installable PWA · Three.js core · Claude Opus 5.5, or **free** Gemini / Groq · web search and tools · voice in and out · Gmail and Calendar · built for mobile
 
 ---
 
@@ -24,11 +24,16 @@ A personal assistant you can install on your phone. It talks, listens, and handl
 1. Open the deployed URL (see **Deploy** below) in **Chrome on Android** or **Safari on iPhone**.
 2. Android: open the ⋮ menu and choose **Install app**. iPhone: tap **Share**, then **Add to Home Screen**.
 3. Open Jarvis, tap **Engage**, then follow the *Initial calibration* steps:
-   - paste your **Claude API key** (create one at <https://platform.claude.com/settings/keys>)
+   - choose an AI brain and paste its key:
+     - **Gemini (free):** get a key at <https://aistudio.google.com/apikey>. No card needed. It can read PDFs and photos and uses Google Search for research.
+     - **Groq (free):** get a key at <https://console.groq.com/keys>. No card needed. Very fast, text only, and uses Groq's built-in web search for research.
+     - **Claude (paid, smartest):** get a key at <https://platform.claude.com/settings/keys>. It needs API credits.
    - enter your name and how Jarvis should address you
    - optionally, **import your CV**
 
-The key is stored only on your device (IndexedDB) and is sent only to `api.anthropic.com`.
+Keys are stored only on your device (IndexedDB) and are sent only to their own provider. You can switch brains at any time in **Profile → AI core**. The ↻ button there loads the provider's current model list.
+
+> Free tiers have per-minute and per-day limits that change often. Google publishes its current limits in AI Studio, and Groq in its console. On Gemini, the Flash-Lite models usually allow the most requests per day. Google may use free-tier data to improve its products.
 
 ## The voice
 
@@ -73,6 +78,8 @@ src/
   styles.css         HUD design system (glass panels, corner brackets, motion)
   visual/orb.ts      Three.js core: particle sphere (GLSL noise), audio-reactive
                      spikes, plexus network, geodesic core, data rings, dust
+  core/providers.ts  free brains: Gemini (function calling + Google Search grounding)
+                     and Groq (OpenAI-compatible tool calls + compound web search)
   core/brain.ts      Claude loop: streaming, parallel tool calls, web search,
                      refusal fallback, simple compaction, CV → profile extraction
   core/tools.ts      22 tools (tasks, reminders, notes, contacts, calls, SMS,
