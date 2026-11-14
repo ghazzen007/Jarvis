@@ -240,7 +240,14 @@ function friendlyError(err: unknown): Error {
   if (err instanceof Anthropic.AuthenticationError) return new Error("Your Claude API key was rejected. Check it in Profile → Settings.");
   if (err instanceof Anthropic.PermissionDeniedError) return new Error("This API key doesn't have access to that model.");
   if (err instanceof Anthropic.RateLimitError) return new Error("Rate limited by the API — give me a moment and try again.");
-  if (err instanceof Anthropic.BadRequestError) return new Error(`Request rejected: ${err.message}`);
+  if (err instanceof Anthropic.BadRequestError) {
+    // Show the API's own explanation, not the raw JSON envelope.
+    const body = err.error as { error?: { message?: string } } | undefined;
+    const msg = body?.error?.message ?? err.message;
+    if (/credit balance/i.test(msg))
+      return new Error("Your Claude API account has no credits left. Add credits at platform.claude.com → Settings → Billing, then try again.");
+    return new Error(`Request rejected: ${msg}`);
+  }
   if (err instanceof Anthropic.APIConnectionError) return new Error("I can't reach the network right now.");
   if (err instanceof Anthropic.APIError) return new Error(`The AI service had a problem (${err.status}). Try again shortly.`);
   return err instanceof Error ? err : new Error(String(err));
