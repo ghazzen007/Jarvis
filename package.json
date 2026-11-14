@@ -1,0 +1,24 @@
+{
+  "name": "jarvis",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "J.A.R.V.I.S. — a personal AI assistant PWA for daily tasks, mail, calls, research and studies.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "three": "^0.180.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "typescript": "5.9",
+    "vite": "^7.3.8",
+    "vite-plugin-pwa": "^2.0.0"
+  }
+}

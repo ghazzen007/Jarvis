@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#02050b" />
+    <meta name="description" content="J.A.R.V.I.S. — your personal AI assistant for mail, calls, research, tasks and studies." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Jarvis" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Rajdhani:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>J.A.R.V.I.S.</title>
+  </head>
+  <body data-view="core" data-mode="idle">
+    <canvas id="orb" aria-label="Jarvis core — tap to talk"></canvas>
+    <div id="fx"></div>
+
+    <div id="app">
+      <header class="hud-top">
+        <div class="brand"><span class="pulse-dot"></span><b>J.A.R.V.I.S</b><small id="status">Online</small></div>
+        <div class="clock"><b id="clock-time">--:--</b><small id="clock-date"></small></div>
+      </header>
+      <main id="views"></main>
+      <nav id="tabbar" class="tabbar" aria-label="Sections"></nav>
+    </div>
+
+    <div id="sheet"><div class="sheet-body panel"></div></div>
+    <div id="toasts"></div>
+
+    <div id="boot">
+      <div class="boot-inner">
+        <div class="boot-logo">
+          <div class="reactor">
+            <svg class="a" viewBox="0 0 100 100" fill="none" stroke="#5ee6ff">
+              <circle cx="50" cy="50" r="46" stroke-dasharray="2 5" opacity=".6" />
+              <path d="M50 4a46 46 0 0 1 40 23" stroke-width="2.5" stroke-linecap="round" />
+              <path d="M50 96a46 46 0 0 1-40-23" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+            <svg class="b" viewBox="0 0 100 100" fill="none" stroke="#a093ff">
+              <circle cx="50" cy="50" r="34" stroke-dasharray="14 6" opacity=".7" />
+              <circle cx="50" cy="50" r="10" fill="rgba(94,230,255,.35)" stroke="#5ee6ff" />
+            </svg>
+          </div>
+          <h1>JARVIS</h1>
+          <p>Just A Rather Very Intelligent System</p>
+        </div>
+        <div class="boot-lines">
+          <div><span>&gt; initialising neural core</span><span>OK</span></div>
+          <div><span>&gt; calibrating voice matrix</span><span>OK</span></div>
+          <div><span>&gt; loading personal profile</span><span>OK</span></div>
+          <div><span>&gt; syncing tasks &amp; memory</span><span>OK</span></div>
+          <div><span>&gt; establishing secure uplink</span><span>OK</span></div>
+        </div>
+        <div class="boot-bar"><i></i></div>
+        <div class="boot-cta">TAP TO ENGAGE</div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
