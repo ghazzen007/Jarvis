@@ -85,7 +85,7 @@ const DESCRIPTIONS: Record<Name, string> = {
     "Prepare a phone call. Shows the user a call card with a dial button (the phone app does the actual call). Resolves contact names automatically.",
   prepare_message: "Prepare an SMS or WhatsApp message. Shows a card the user taps to send through their messaging app.",
   compose_email:
-    "Draft an email. The user sees the draft and must approve before it is sent (via Gmail if connected, otherwise via their mail app). Never claim an email is sent unless this tool's result says so.",
+    "Draft an email to someone the user explicitly asked to contact (or a contact/inbox sender). The user sees the draft and must approve before it is sent (via Gmail if connected, otherwise via their mail app). Never use it to 'register', 'sync' or notify services, and never claim an email is sent unless this tool's result says so.",
   check_inbox: "List recent Gmail messages matching a query (requires Google connection).",
   read_email: "Read the full text of one Gmail message by id.",
   calendar_events: "List Google Calendar events in a time range (default: now until end of tomorrow).",
