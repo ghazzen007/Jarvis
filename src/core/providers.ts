@@ -387,3 +387,40 @@ export async function extractProfileFree(
     goals: arr(p.goals),
   };
 }
+
+/** One-shot completion (optionally web-grounded) for background jobs like the client hunter. */
+export async function completeFree(
+  provider: Exclude<Provider, "claude">,
+  prompt: string,
+  search: boolean,
+): Promise<{ text: string; sources: { url: string; title: string }[] }> {
+  const ctrl = new AbortController();
+  if (provider === "gemini") {
+    const data = await post(
+      "Gemini",
+      `${GEMINI}/models/${encodeURIComponent(state.settings.geminiModel || "gemini-flash-lite-latest")}:generateContent`,
+      { "x-goog-api-key": keyFor("gemini") },
+      { contents: [{ role: "user", parts: [{ text: prompt }] }], ...(search ? { tools: [{ google_search: {} }] } : {}) },
+      ctrl.signal,
+    );
+    const cand = data.candidates?.[0];
+    const text = (cand?.content?.parts ?? []).map((p: GPart) => (p.thought ? "" : (p.text ?? ""))).join("");
+    const sources = (cand?.groundingMetadata?.groundingChunks ?? [])
+      .filter((c: { web?: { uri?: string } }) => c.web?.uri)
+      .map((c: { web: { uri: string; title?: string } }) => ({ url: c.web.uri, title: c.web.title ?? c.web.uri }));
+    if (!text) throw new Error(`Gemini returned nothing (${cand?.finishReason ?? data.promptFeedback?.blockReason ?? "empty"}).`);
+    return { text, sources };
+  }
+  const run = (model: string) =>
+    post("Groq", `${GROQ}/chat/completions`, { Authorization: `Bearer ${keyFor("groq")}` }, { model, messages: [{ role: "user", content: prompt }] }, ctrl.signal);
+  let data;
+  try {
+    data = await run(search ? "groq/compound" : state.settings.groqModel || "openai/gpt-oss-120b");
+  } catch (e) {
+    if (!search) throw e;
+    data = await run(state.settings.groqModel || "openai/gpt-oss-120b");
+  }
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) throw new Error("Groq returned nothing.");
+  return { text, sources: [] };
+}

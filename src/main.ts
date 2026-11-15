@@ -6,13 +6,13 @@ import * as voice from "./core/voice";
 import { startScheduler } from "./core/scheduler";
 import { mountHome, send, startListening, refreshReadout, setFocusStarter, rerenderFeed } from "./ui/home";
 import { mountTasks, render as renderTasks } from "./ui/tasks";
-import { mountComms, render as renderComms } from "./ui/comms";
+import { mountComms, render as renderComms, openClients } from "./ui/comms";
 import { mountStudy, render as renderStudy, startFocus, openDeck } from "./ui/study";
 import { mountProfile, render as renderProfile, showOnboarding, setSettingsListener, hasKey } from "./ui/profile";
 import { initOverlays, toast } from "./ui/overlay";
 import { cardActions } from "./ui/cards";
 import { icon } from "./ui/icons";
-import { h } from "./core/util";
+import { h, todayKey } from "./core/util";
 
 type View = "core" | "tasks" | "comms" | "study" | "profile";
 const VIEWS: { id: View; label: string; icon: string }[] = [
@@ -159,6 +159,10 @@ async function start() {
     void send(text);
   };
   cardActions.openDeck = openDeck;
+  cardActions.openClients = () => {
+    openClients();
+    goto("comms");
+  };
   cardActions.goto = (v) => goto(v as View);
   const w = window as unknown as { jarvisGoto(v: string): void; jarvisRefresh(): void };
   w.jarvisGoto = (v) => goto(v as View);
@@ -167,7 +171,7 @@ async function start() {
   // keep visible views fresh when data changes (e.g. Jarvis adds a task by voice)
   onChange((key) => {
     if (key === "tasks" || key === "reminders" || key === "notes") current === "tasks" ? renderTasks() : refreshReadout();
-    if (key === "contacts" && current === "comms") renderComms();
+    if ((key === "contacts" || key === "leads") && current === "comms") renderComms();
     if (key === "decks" && current === "study") renderStudy();
     if (key === "focus" || key === "profile") refreshReadout();
   });
@@ -187,6 +191,12 @@ async function start() {
   });
   applyWake();
   voice.onVoiceIssue((msg) => toast("Voice", msg, 7000));
+
+  // Morning nudge for the daily client hunt (once the user has started using it).
+  const hs = state.settings.hunter;
+  const todayStr = todayKey();
+  if ((state.leads.length || hs.area) && hs.lastHunt !== todayStr && new Date().getHours() >= 8)
+    setTimeout(() => toast("Client hunt", "Today's hunt hasn't run yet — Comms → Clients, or say “run today's client hunt”.", 9000), 4000);
 
   const action = new URLSearchParams(location.search).get("action");
   if (!hasKey()) setTimeout(showOnboarding, 1600);

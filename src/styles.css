@@ -671,3 +671,8 @@ body[data-mode="thinking"] .mic { background: radial-gradient(circle at 50% 40%,
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* client hunter */
+.swatches { display: flex; gap: 6px; margin-top: 10px; }
+.swatches i { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 0 10px rgba(0, 0, 0, 0.4); }
+.btn:disabled { opacity: 0.7; cursor: progress; }

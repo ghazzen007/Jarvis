@@ -67,6 +67,11 @@ const S = {
   }),
   start_focus_timer: z.object({ minutes: z.number().int().min(1).max(180), label: z.string().optional() }),
   open_link: z.object({ url: z.string().url(), label: z.string() }),
+  find_business_leads: z.object({
+    count: z.number().int().min(3).max(10).optional().describe("How many businesses to find (default 7)"),
+    area: z.string().optional().describe("Area to search; omit to use the user's location"),
+  }),
+  list_leads: z.object({ status: z.enum(["new", "contacted", "replied", "demo", "won", "lost", "all"]).optional() }),
 };
 
 type Name = keyof typeof S;
@@ -94,6 +99,9 @@ const DESCRIPTIONS: Record<Name, string> = {
   create_flashcards: "Create a flashcard deck for spaced-repetition study in the Study tab.",
   start_focus_timer: "Start a Pomodoro-style focus timer.",
   open_link: "Offer the user a button to open a useful link (maps, docs, a video, a course page).",
+  find_business_leads:
+    "Client Hunter: search the web for local businesses near the user that have no website (potential web-design clients) and add them to the Clients list in the Comms tab. It does NOT contact anyone — the user reviews each lead, then sends the pitch themselves from the Clients list.",
+  list_leads: "List the user's web-design client leads and their status (new, contacted, replied, demo, won, lost).",
 };
 
 /** Provider-neutral tool definitions (JSON Schema), shared by Claude, Gemini and Groq. */
@@ -140,6 +148,8 @@ export const TOOL_LABELS: Record<string, string> = {
   create_flashcards: "Building flashcards",
   start_focus_timer: "Starting focus timer",
   open_link: "Preparing link",
+  find_business_leads: "Hunting for clients",
+  list_leads: "Checking clients",
 };
 
 function findContacts(q: string): Contact[] {
@@ -375,6 +385,24 @@ async function exec(name: Name, a: Record<string, never>, ui: ToolUI): Promise<u
       ui.startFocus(i.minutes, i.label ?? "Focus");
       ui.card({ kind: "focus", minutes: i.minutes, label: i.label ?? "Focus" });
       return { ok: true };
+    }
+    case "find_business_leads": {
+      const i = a as unknown as z.infer<typeof S.find_business_leads>;
+      const { findLeads } = await import("./hunter");
+      const leads = await findLeads(i.count ?? 7, i.area);
+      ui.card({ kind: "leads", count: leads.length, names: leads.map((l) => `${l.name} · ${l.category}`) });
+      return {
+        ok: true,
+        found: leads.map((l) => ({ name: l.name, category: l.category, email: !!l.email, phone: !!l.phone, instagram: !!l.instagram, facebook: !!l.facebook })),
+        next: "Leads saved in Comms → Clients. The user opens each one to review, generate the pitch and send it.",
+      };
+    }
+    case "list_leads": {
+      const st = (a as unknown as { status?: string }).status ?? "all";
+      return state.leads
+        .filter((l) => st === "all" || l.status === st)
+        .slice(0, 30)
+        .map(({ name, category, status, contactedAt, channel }) => ({ name, category, status, channel, contacted: contactedAt ? new Date(contactedAt).toDateString() : undefined }));
     }
     case "open_link": {
       const i = a as unknown as z.infer<typeof S.open_link>;

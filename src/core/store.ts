@@ -98,6 +98,7 @@ export interface Settings {
   wakeWord: boolean;
   googleClientId: string;
   reducedMotion: boolean;
+  hunter: HunterSettings;
 }
 
 export type CardData =
@@ -113,7 +114,8 @@ export type CardData =
   | { kind: "weather"; place: string; now: string; temp: number; high: number; low: number; code: number }
   | { kind: "deck"; deckId: string; name: string; count: number }
   | { kind: "focus"; minutes: number; label: string }
-  | { kind: "note"; title: string };
+  | { kind: "note"; title: string }
+  | { kind: "leads"; count: number; names: string[] };
 
 export interface DisplayMsg {
   id: string;
@@ -135,6 +137,43 @@ export interface Session {
   updatedAt: number;
 }
 
+export type LeadStatus = "new" | "contacted" | "replied" | "demo" | "won" | "lost";
+
+export interface Lead {
+  id: string;
+  name: string;
+  category: string;
+  area: string;
+  address?: string;
+  description?: string; // what the business does / its specialty
+  why?: string; // why it needs a website
+  phone?: string;
+  email?: string;
+  instagram?: string;
+  facebook?: string;
+  mapsUrl?: string;
+  source?: string; // where the info was found
+  palette?: string[]; // suggested brand colours (hex)
+  status: LeadStatus;
+  notes?: string;
+  pitch?: { subject: string; body: string; dm: string; lang: string };
+  createdAt: number;
+  contactedAt?: number;
+  channel?: string;
+}
+
+export interface HunterSettings {
+  area: string;
+  language: "fr" | "en" | "ar";
+  senderName: string;
+  senderPhone: string;
+  portfolio: string;
+  pack1: string;
+  pack2: string;
+  pack3: string;
+  lastHunt: string; // YYYY-MM-DD
+}
+
 export interface FocusLog {
   date: string; // YYYY-MM-DD
   minutes: number;
@@ -149,6 +188,7 @@ export interface State {
   contacts: Contact[];
   decks: Deck[];
   focus: FocusLog[];
+  leads: Lead[];
   session: Session | null;
 }
 
@@ -174,6 +214,17 @@ export const DEFAULT_SETTINGS: Settings = {
   wakeWord: false,
   googleClientId: "",
   reducedMotion: false,
+  hunter: {
+    area: "",
+    language: "fr",
+    senderName: "",
+    senderPhone: "",
+    portfolio: "",
+    pack1: "100 $ — design & frontend (no backend, database, deployment or maintenance)",
+    pack2: "250 $ — full-stack: frontend, backend, database and deployment",
+    pack3: "250 $ + 50 $ every 3 months — full-stack with ongoing maintenance",
+    lastHunt: "",
+  },
 };
 
 export const DEFAULT_PROFILE: Profile = {
@@ -202,11 +253,12 @@ export const state: State = {
   contacts: [],
   decks: [],
   focus: [],
+  leads: [],
   session: null,
 };
 
 type Key = keyof State;
-const KEYS: Key[] = ["settings", "profile", "tasks", "reminders", "notes", "contacts", "decks", "focus", "session"];
+const KEYS: Key[] = ["settings", "profile", "tasks", "reminders", "notes", "contacts", "decks", "focus", "leads", "session"];
 
 type Listener = (key: Key) => void;
 const listeners = new Set<Listener>();
@@ -237,7 +289,10 @@ export async function loadState(): Promise<void> {
     KEYS.map(async (k) => {
       const v = await kvGet<unknown>(k);
       if (v === undefined || v === null) return;
-      if (k === "settings") state.settings = { ...DEFAULT_SETTINGS, ...(v as Settings) };
+      if (k === "settings") {
+        const saved = v as Settings;
+        state.settings = { ...DEFAULT_SETTINGS, ...saved, hunter: { ...DEFAULT_SETTINGS.hunter, ...(saved.hunter ?? {}) } };
+      }
       else if (k === "profile") state.profile = { ...DEFAULT_PROFILE, ...(v as Profile) };
       else (state as unknown as Record<string, unknown>)[k] = v;
     }),

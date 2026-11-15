@@ -5,7 +5,7 @@ import * as voice from "../core/voice";
 import type { ToolUI } from "../core/tools";
 import { h, md, fileToBase64, todayKey } from "../core/util";
 import { icon, RINGS_SVG } from "./icons";
-import { renderCard } from "./cards";
+import { renderCard, cardActions } from "./cards";
 import type { Orb } from "../visual/orb";
 
 type Block = Anthropic.Beta.BetaContentBlockParam;
@@ -312,6 +312,7 @@ export function mountHome(root: HTMLElement, theOrb: Orb) {
   chip("mail", "Check mail", () => void send("Check my inbox and tell me what actually needs my attention."));
   chip("search", "Research", () => prefill("Research "));
   chip("study", "Study", () => void send("Let's study. Ask me which subject and how I want to work — explanation, quiz or flashcards."));
+  chip("search", "Client hunt", () => cardActions.openClients());
   chip("phone", "Call", () => prefill("Call "));
   chip("note", "Note", () => prefill("Take a note: "));
   chip("spark", "New chat", () => {

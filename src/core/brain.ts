@@ -5,7 +5,7 @@ import { state, commit, uid, type Effort, type Profile, type Session } from "./s
 import { TOOLS, TOOL_LABELS, runTool, type ToolUI } from "./tools";
 import { buildSystemPrompt, contextMessage } from "./prompt";
 import { NoKeyError } from "./errors";
-import { askFree, extractProfileFree } from "./providers";
+import { askFree, extractProfileFree, completeFree } from "./providers";
 
 type MsgParam = Anthropic.Beta.BetaMessageParam;
 type Block = Anthropic.Beta.BetaContentBlockParam;
@@ -265,6 +265,43 @@ function friendlyError(err: unknown): Error {
   if (err instanceof Anthropic.APIConnectionError) return new Error("I can't reach the network right now.");
   if (err instanceof Anthropic.APIError) return new Error(`The AI service had a problem (${err.status}). Try again shortly.`);
   return err instanceof Error ? err : new Error(String(err));
+}
+
+/* ---------------------------------------------------------------- *
+ *  One-shot completion with optional web search (any provider)      *
+ * ---------------------------------------------------------------- */
+export async function complete(prompt: string, opts: { search?: boolean } = {}): Promise<{ text: string; sources: { url: string; title: string }[] }> {
+  const provider = state.settings.provider;
+  if (provider !== "claude") return completeFree(provider, prompt, !!opts.search);
+  const api = getClient();
+  const model = state.settings.model;
+  const messages: MsgParam[] = [{ role: "user", content: prompt }];
+  const sources = new Map<string, string>();
+  let text = "";
+  try {
+    for (let i = 0; i < 5; i++) {
+      const stream = api.beta.messages.stream({
+        model,
+        max_tokens: 32000,
+        messages,
+        ...(opts.search ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 12 }] } : {}),
+        output_config: { effort: "medium" },
+        ...(FALLBACK_MODELS.has(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+      });
+      const msg = await stream.finalMessage();
+      for (const b of msg.content) {
+        if (b.type === "text") text += b.text;
+        if (b.type === "web_search_tool_result" && Array.isArray(b.content))
+          for (const r of b.content) if (r.type === "web_search_result") sources.set(r.url, r.title);
+      }
+      if (msg.stop_reason === "refusal") throw new Error("That request was declined.");
+      if (msg.stop_reason !== "pause_turn") break;
+      messages.push({ role: "assistant", content: msg.content });
+    }
+  } catch (err) {
+    throw friendlyError(err);
+  }
+  return { text, sources: [...sources].map(([url, title]) => ({ url, title })) };
 }
 
 /* ---------------------------------------------------------------- *

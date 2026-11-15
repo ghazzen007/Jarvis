@@ -19,6 +19,22 @@ A personal assistant you can install on your phone. It talks, listens, and handl
 | **Your profile** | **Import your CV** (PDF or photo). Claude pulls out your skills, tools, education, routines and goals, and Jarvis then fits its advice to the methods and tools you already know. During conversations it also remembers facts you tell it. |
 | **Calendar and weather** | Lists and creates Google Calendar events. Weather comes from Open-Meteo, with no key needed. |
 
+## Client Hunter (freelance web-design leads)
+
+Go to **Comms → Clients**, or say *"Jarvis, run today's client hunt"*.
+
+1. Jarvis detects your area from your phone's location. You can edit it.
+2. Each day it web-searches for 5–10 independent local businesses near you that have no website: cafés, restaurants, pastry shops, salons, boutiques and so on. It keeps only contact details it actually found, with a source link for each.
+3. For each lead, Jarvis writes a personalised pitch in French, English or Tunisian Arabic. The pitch includes your three packs and a free-demo offer, plus a polite opt-out line.
+4. You review and edit the pitch, then send it yourself:
+   - **Gmail:** one tap.
+   - **WhatsApp:** opens with the message pre-filled.
+   - **Instagram or Facebook:** the message is copied and their page opens.
+5. The **Demo** button copies a ready-made prompt for the Claude app, which builds a single-file 2026-style demo site with 3D and motion for that business.
+6. Each lead is tracked through New → Contacted → Replied → Demo sent → Won. A follow-up reminder is set 3 days after first contact.
+
+Nothing is sent automatically. Jarvis doesn't scrape Google Maps or automate social DMs, because both break those platforms' terms and get accounts banned.
+
 ## Install it on your phone
 
 1. Open the deployed URL (see **Deploy** below) in **Chrome on Android** or **Safari on iPhone**.

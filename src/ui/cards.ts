@@ -7,6 +7,7 @@ export const cardActions = {
   ask: (_text: string) => {},
   openDeck: (_id: string) => {},
   goto: (_view: string) => {},
+  openClients: () => {},
 };
 
 function head(ic: string, title: string, sub: string) {
@@ -165,6 +166,12 @@ export function renderCard(c: CardData, confirm?: ConfirmOpts): HTMLElement {
       el.append(head("cards", "Flashcards ready", `${c.name} · ${c.count} cards`));
       el.append(h("div", { class: "actions" }, btn("Study now", "play", () => cardActions.openDeck(c.deckId), "btn sm primary")));
       break;
+    case "leads": {
+      el.append(head("search", "Client hunt", `${c.count} new lead${c.count === 1 ? "" : "s"} found`));
+      for (const n of c.names.slice(0, 10)) el.append(h("div", { class: "list-item" }, n));
+      el.append(h("div", { class: "actions" }, btn("Review & pitch", "send", () => cardActions.openClients(), "btn sm primary")));
+      break;
+    }
     case "focus":
       el.append(head("timer", "Focus session", `${c.minutes} min · ${c.label}`));
       el.append(h("div", { class: "actions" }, btn("Open timer", "timer", () => cardActions.goto("study"), "btn sm")));

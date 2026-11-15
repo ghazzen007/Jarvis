@@ -4,9 +4,16 @@ import * as google from "../core/google";
 import { icon } from "./icons";
 import { openSheet, closeSheet, toast } from "./overlay";
 import { cardActions } from "./cards";
+import { renderClients } from "./hunter";
 
 let root: HTMLElement;
-let tab: "contacts" | "inbox" | "compose" = "contacts";
+let tab: "contacts" | "inbox" | "compose" | "clients" = "contacts";
+
+/** Jump straight to the Client Hunter list. */
+export function openClients() {
+  tab = "clients";
+  render();
+}
 let query = "";
 
 interface PickerContact { name?: string[]; tel?: string[]; email?: string[] }
@@ -132,6 +139,7 @@ export function render() {
     ["contacts", "Contacts"],
     ["inbox", "Inbox"],
     ["compose", "Compose"],
+    ["clients", "Clients"],
   ] as const) {
     const b = h("button", { type: "button", class: v === tab ? "on" : "" }, l);
     b.addEventListener("click", () => ((tab = v), render()));
@@ -146,7 +154,9 @@ export function render() {
   );
   const body = h("div", { class: "stagger", style: "margin-top:14px" });
 
-  if (tab === "contacts") {
+  if (tab === "clients") {
+    renderClients(body, render);
+  } else if (tab === "contacts") {
     const search = h("input", { class: "field grow", placeholder: "Search contacts", value: query }) as HTMLInputElement;
     search.addEventListener("input", () => {
       query = search.value;
